@@ -25,11 +25,11 @@ public class JavaClientTest
   static String bFileName = "Binary_File.b";
   static final String LOCAL_APP_ENGINE_SERVER_URL = "http://127.0.0.1:8888";
 
-  static final String DEFAULT_ROOT_URL = "http://30.mydesk-cloud.appspot.com";
+  static final String DEFAULT_ROOT_URL = "http://20.mydesk-cloud.appspot.com";
   static final String serverPath = "/mydesk_cloud/server";
   // added to URL to specify the name of the file
-  static final String fileIdParameter = "?fileid=";
-  static final String typeParameter = "&type=";
+  static final String queryParameter = "?fileid=";
+  static final String dumParameter = "&dumfile=True";
   
   //===========================================================================
   // Main
@@ -37,11 +37,104 @@ public class JavaClientTest
   { 
     createFileSendToServer();
     getFileVerifyContents();
-    sendFileToServer("AnimalHabitats.wemap", "wemap");
-    sendFileToServer("Balloon.wemap", "wemap");
-    sendFileToServer("ConceptMap1.wemap", "wemap");
   }
- 
+  
+  public static void getFile(String fileName)
+  {
+    HttpURLConnection conn = null;
+    FileOutputStream outfile = null;
+    try
+    { 
+      outfile = new FileOutputStream(fileName);
+      // Fetch the file and verify it's contents
+      URL uploadUrl = new URL(getServerUrl() + queryParameter + fileName);
+      conn = (HttpURLConnection)uploadUrl.openConnection();
+      conn.setDoInput(true);
+      conn.setRequestMethod("GET");
+      int count = 0, bufferSize = 10240;
+      
+      byte [] data = new byte[bufferSize];
+      InputStream in = conn.getInputStream();
+     
+      int length = 0;
+      while((length = in.read(data, 0, bufferSize)) > 0)
+      {  outfile.write(data, 0, length); }
+      outfile.close();
+      
+      int http_status = conn.getResponseCode();
+      System.out.println("Count : " + count);
+      System.out.println("Status Code: " + http_status);
+      
+      if(http_status/100 != 2)
+      {  throw new IOException("Bad status"); }
+      
+    }
+    catch( MalformedURLException e )
+    {  e.printStackTrace();  }
+    catch( IOException e )
+    {  e.printStackTrace();  }
+    finally
+    {
+      if(conn != null)
+      {  conn.disconnect();  }
+      if(outfile != null)
+      {  
+        try
+        {  outfile.close();  }
+        catch( IOException e )
+        { }  
+      }
+    } 
+  }
+  
+  static public void sendFileToServer(String fileID)
+  {
+    HttpURLConnection conn = null;
+    FileInputStream file = null;
+    try
+    {
+      file = new FileInputStream(fileID);
+      
+      // Set connection properties and open connection to server
+      URL serverUrl = new URL(getServerUrl() + queryParameter + fileID);
+      conn = (HttpURLConnection)serverUrl.openConnection();
+      conn.setDoOutput(true);
+      conn.setRequestMethod("PUT");    
+      OutputStream out = conn.getOutputStream();
+
+      // Send file to server      
+      byte [] buffer = new byte [bufferSize];
+      int length = 0, count = 0;
+      while((length = file.read(buffer, 0, bufferSize)) > 0)
+      {
+        out.write(buffer, 0, length);
+        count++; // number of times we read from file
+      }
+      
+      System.out.println("Count : " + count);
+      int http_status = conn.getResponseCode();      
+      System.out.println("Status Code: " + http_status);
+      
+      if(http_status/100 != 2) // Status codes not 2XX are bad
+      {  throw new IOException("Bad status"); }            
+    }
+    catch( MalformedURLException e )
+    {  e.printStackTrace();  }
+    catch( IOException e )
+    {  e.printStackTrace();  }
+    finally
+    {
+      if(conn != null)
+      {  conn.disconnect();  }
+      if(file != null)
+      {  
+        try
+        {  file.close();  }
+        catch( IOException e )
+        { }  
+      }
+    }    
+  }  
   //===========================================================================
   // Creates a binary file and sends that file to the server for storage
   static public void createFileSendToServer()
@@ -54,9 +147,9 @@ public class JavaClientTest
       // Open file, create buffered stream
       File fileInfo = new File(bFileName);
       file = new BufferedInputStream(new FileInputStream(fileInfo), bufferSize);
-       
+      
       // Set connection properties and open connection to server
-      URL serverUrl = new URL(getServerUrl() + fileIdParameter + bFileName + typeParameter + "binary");
+      URL serverUrl = new URL(getServerUrl() + queryParameter + bFileName + dumParameter);
       conn = (HttpURLConnection)serverUrl.openConnection();
       conn.setDoOutput(true);
       conn.setRequestMethod("PUT");    
@@ -104,7 +197,7 @@ public class JavaClientTest
     try
     {                 
       // Fetch the file and verify it's contents
-      URL uploadUrl = new URL(getServerUrl() + fileIdParameter + bFileName);
+      URL uploadUrl = new URL(getServerUrl() + queryParameter + bFileName);
       conn = (HttpURLConnection)uploadUrl.openConnection();
       conn.setDoInput(true);
       conn.setRequestMethod("GET");
@@ -198,103 +291,5 @@ public class JavaClientTest
       e.printStackTrace();
     }
     
-  }
-  
-  public static void getFile(String fileName)
-  {
-    HttpURLConnection conn = null;
-    FileOutputStream outfile = null;
-    try
-    { 
-      outfile = new FileOutputStream(fileName);
-      // Fetch the file and verify it's contents
-      URL uploadUrl = new URL(getServerUrl() + fileIdParameter + fileName);
-      conn = (HttpURLConnection)uploadUrl.openConnection();
-      conn.setDoInput(true);
-      conn.setRequestMethod("GET");
-      int count = 0, bufferSize = 10240;
-      
-      byte [] data = new byte[bufferSize];
-      InputStream in = conn.getInputStream();
-     
-      int length = 0;
-      while((length = in.read(data, 0, bufferSize)) > 0)
-      {  outfile.write(data, 0, length); }
-      outfile.close();
-      
-      int http_status = conn.getResponseCode();
-      System.out.println("Count : " + count);
-      System.out.println("Status Code: " + http_status);
-      
-      if(http_status/100 != 2)
-      {  throw new IOException("Bad status"); }
-      
-    }
-    catch( MalformedURLException e )
-    {  e.printStackTrace();  }
-    catch( IOException e )
-    {  e.printStackTrace();  }
-    finally
-    {
-      if(conn != null)
-      {  conn.disconnect();  }
-      if(outfile != null)
-      {  
-        try
-        {  outfile.close();  }
-        catch( IOException e )
-        { }  
-      }
-    } 
-  }
-  
-  static public void sendFileToServer(String fileID, String type)
-  {
-    HttpURLConnection conn = null;
-    FileInputStream file = null;
-    try
-    {
-      file = new FileInputStream(fileID);
-      
-      // Set connection properties and open connection to server
-      URL serverUrl = new URL(getServerUrl() + fileIdParameter + fileID + typeParameter + type);
-      conn = (HttpURLConnection)serverUrl.openConnection();
-      conn.setDoOutput(true);
-      conn.setRequestMethod("PUT");    
-      OutputStream out = conn.getOutputStream();
-
-      // Send file to server      
-      byte [] buffer = new byte [bufferSize];
-      int length = 0, count = 0;
-      while((length = file.read(buffer, 0, bufferSize)) > 0)
-      {
-        out.write(buffer, 0, length);
-        count++; // number of times we read from file
-      }
-      
-      System.out.println("Count : " + count);
-      int http_status = conn.getResponseCode();      
-      System.out.println("Status Code: " + http_status);
-      
-      if(http_status/100 != 2) // Status codes not 2XX are bad
-      {  throw new IOException("Bad status"); }
-      System.out.println("File Succesfully Sent");
-    }
-    catch( MalformedURLException e )
-    {  e.printStackTrace();  }
-    catch( IOException e )
-    {  e.printStackTrace();  }
-    finally
-    {
-      if(conn != null)
-      {  conn.disconnect();  }
-      if(file != null)
-      {  
-        try
-        {  file.close();  }
-        catch( IOException e )
-        { }  
-      }
-    }    
   }  
 }
